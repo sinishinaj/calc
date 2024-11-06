@@ -1,6 +1,9 @@
 {-# LANGUAGE InstanceSigs #-}
+
 module Parser where
-import Lang (Expression(..))
+
+import Control.Applicative ( (<|>) )
+import Lang ( Expression(..) )
 import Data.Maybe ( isJust )
 
 s' :: String
@@ -149,13 +152,10 @@ parseLeftSimpleExpression input = do
   Just(input'''''', leftNumber `Add` rightExpression)
 
 parseExpression :: (NumberParser a) => String -> Maybe (String, Expression a)
-parseExpression input = do
-  r <- finalParse parseLeftSimpleExpression input
-  undefined
-  -- | isJust $ parseLeftSimpleExpression input = finalParse parseLeftSimpleExpression input
-  -- | isJust $ parseSimpleExpression input = finalParse parseSimpleExpression input
-  -- | isJust $ parseNumber input = finalParse parseNumber input
-  -- | otherwise = Nothing
+parseExpression input = 
+      finalParse parseLeftSimpleExpression input
+  <|> finalParse parseSimpleExpression input
+  <|> finalParse parseNumber input
 
 finalParse :: (String -> Maybe (String, Expression a)) -> String -> Maybe (String, Expression a)
 finalParse parseFunc input = do
@@ -168,4 +168,5 @@ finalParse parseFunc input = do
     eOf "" = Just ()
     eOf _  = Nothing
 
+e :: String
 e = "1  add  2  add 3"
