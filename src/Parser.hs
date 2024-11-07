@@ -93,27 +93,39 @@ instance NumberParser Int where
 
 instance NumberParser Float where
   parseNumber :: String -> Maybe (String, Expression Float)
-  parseNumber input = do
-    (input', _) <- skipSpace input
-    (input'', digits) <- parseDigits input'
-    Just (input'', toNumber digits)
-      where
-        toNumber :: String -> Expression Float
-        toNumber s = do
-          let v = read s :: Float
-          Num v
+  parseNumber input =
+        parseIntegerAndFraction
+    <|> parseIntegerPart
+    where
+      toNumber :: String -> Expression Float
+      toNumber s = do
+        let v = read s :: Float
+        Num v
+      parseIntegerPart :: Maybe (String, Expression Float)
+      parseIntegerPart = do
+        (input', _) <- skipSpace input
+        (input'', integerPart) <- parseDigits input'
+        Just (input'', toNumber integerPart)
+      parseIntegerAndFraction :: Maybe (String, Expression Float)
+      parseIntegerAndFraction = do
+        (input', _) <- skipSpace input
+        (input'', integerPart) <- parseDigits input'
+        (input''', _) <- parseChar input'' '.'
+        (input'''', fractionPart) <- parseDigits input'''
+        Just (input'''', toNumber (integerPart ++ "." ++ fractionPart))
 
 instance NumberParser Bool where
   parseNumber :: String -> Maybe (String, Expression Bool)
   parseNumber input = do
     (input', _) <- skipSpace input
     (input'', digits) <- parseDigits input'
-    Just (input'', toNumber digits)
+    v <- toBoolean digits
+    Just (input'', Num v)
       where
-        toNumber :: String -> Expression Bool
-        toNumber "0" = Num False
-        toNumber "1" = Num True
-        toNumber _ = undefined
+        toBoolean :: String -> Maybe Bool
+        toBoolean "0" = Just False
+        toBoolean "1" = Just True
+        toBoolean _ = Nothing
 
 parseChar :: String -> Char -> Maybe (String, Char)
 parseChar input c = do
@@ -139,7 +151,7 @@ parseSimpleExpression input = do
   (input'''', _) <- parseString input''' "add"
   (input''''', _) <- skipSpace input''''
   (input'''''', rightNumber) <- parseNumber input'''''
-  Just(input'''''', leftNumber `Add` rightNumber)
+  Just (input'''''', leftNumber `Add` rightNumber)
 
 parseLeftSimpleExpression :: (NumberParser a) => String -> Maybe (String, Expression a)
 parseLeftSimpleExpression input = do
